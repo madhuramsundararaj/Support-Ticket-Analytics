@@ -1,0 +1,277 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "2026ee37-d11f-4cd8-842f-9e2fb68fedbb",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Dataset loaded successfully\n",
+      "Shape: (8469, 17)\n",
+      "\n",
+      "Columns: ['Ticket ID', 'Customer Name', 'Customer Email', 'Customer Age', 'Customer Gender', 'Product Purchased', 'Date of Purchase', 'Ticket Type', 'Ticket Subject', 'Ticket Description', 'Ticket Status', 'Resolution', 'Ticket Priority', 'Ticket Channel', 'First Response Time', 'Time to Resolution', 'Customer Satisfaction Rating']\n"
+     ]
+    }
+   ],
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "\n",
+    "# Load the dataset\n",
+    "df = pd.read_csv('/Users/madhuramdhanesh/Downloads/customer_support_tickets.csv')\n",
+    "\n",
+    "print(\"Dataset loaded successfully\")\n",
+    "print(\"Shape:\", df.shape)\n",
+    "print(\"\\nColumns:\", df.columns.tolist())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "bd736cd2-da9c-49fd-929b-a34baf360643",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Missing Values:\n",
+      "Ticket ID                          0\n",
+      "Customer Name                      0\n",
+      "Customer Email                     0\n",
+      "Customer Age                       0\n",
+      "Customer Gender                    0\n",
+      "Product Purchased                  0\n",
+      "Date of Purchase                   0\n",
+      "Ticket Type                        0\n",
+      "Ticket Subject                     0\n",
+      "Ticket Description                 0\n",
+      "Ticket Status                      0\n",
+      "Resolution                      5700\n",
+      "Ticket Priority                    0\n",
+      "Ticket Channel                     0\n",
+      "First Response Time             2819\n",
+      "Time to Resolution              5700\n",
+      "Customer Satisfaction Rating    5700\n",
+      "dtype: int64\n",
+      "\n",
+      "Data Types:\n",
+      "Ticket ID                         int64\n",
+      "Customer Name                    object\n",
+      "Customer Email                   object\n",
+      "Customer Age                      int64\n",
+      "Customer Gender                  object\n",
+      "Product Purchased                object\n",
+      "Date of Purchase                 object\n",
+      "Ticket Type                      object\n",
+      "Ticket Subject                   object\n",
+      "Ticket Description               object\n",
+      "Ticket Status                    object\n",
+      "Resolution                       object\n",
+      "Ticket Priority                  object\n",
+      "Ticket Channel                   object\n",
+      "First Response Time              object\n",
+      "Time to Resolution               object\n",
+      "Customer Satisfaction Rating    float64\n",
+      "dtype: object\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Check missing values\n",
+    "print(\"Missing Values:\")\n",
+    "print(df.isnull().sum())\n",
+    "\n",
+    "print(\"\\nData Types:\")\n",
+    "print(df.dtypes)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "c936db2e-5966-4fb3-b033-891ffd6ceea7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Date conversion done\n",
+      "\n",
+      "Ticket Status breakdown:\n",
+      "Ticket Status\n",
+      "Pending Customer Response    2881\n",
+      "Open                         2819\n",
+      "Closed                       2769\n",
+      "Name: count, dtype: int64\n",
+      "\n",
+      "Ticket Priority breakdown:\n",
+      "Ticket Priority\n",
+      "Medium      2192\n",
+      "Critical    2129\n",
+      "High        2085\n",
+      "Low         2063\n",
+      "Name: count, dtype: int64\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Convert date columns to proper datetime format\n",
+    "df['Date of Purchase'] = pd.to_datetime(df['Date of Purchase'])\n",
+    "df['First Response Time'] = pd.to_datetime(df['First Response Time'], errors='coerce')\n",
+    "df['Time to Resolution'] = pd.to_datetime(df['Time to Resolution'], errors='coerce')\n",
+    "\n",
+    "# Create a flag for resolved tickets\n",
+    "df['is_resolved'] = df['Ticket Status'].apply(lambda x: 1 if x == 'Closed' else 0)\n",
+    "\n",
+    "# Create SLA breach flag\n",
+    "# Critical tickets should be resolved within 24 hours\n",
+    "# High within 48 hours, Medium within 72 hours, Low within 96 hours\n",
+    "sla_limits = {\n",
+    "    'Critical': 24,\n",
+    "    'High': 48,\n",
+    "    'Medium': 72,\n",
+    "    'Low': 96\n",
+    "}\n",
+    "\n",
+    "print(\"Date conversion done\")\n",
+    "print(\"\\nTicket Status breakdown:\")\n",
+    "print(df['Ticket Status'].value_counts())\n",
+    "\n",
+    "print(\"\\nTicket Priority breakdown:\")\n",
+    "print(df['Ticket Priority'].value_counts())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "6a928c35-5732-4a66-86c1-4526a5cd3f62",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Frustration Score created\n",
+      "\n",
+      "Frustration Score summary:\n",
+      "count    8469.000000\n",
+      "mean       17.076632\n",
+      "std         5.306426\n",
+      "min         2.000000\n",
+      "25%        15.000000\n",
+      "50%        19.000000\n",
+      "75%        21.000000\n",
+      "max        23.000000\n",
+      "Name: frustration_score, dtype: float64\n",
+      "\n",
+      "Top 5 most frustrated customers:\n",
+      "         Customer Name Ticket Priority  Customer Satisfaction Rating  \\\n",
+      "0        Marisa Obrien        Critical                           NaN   \n",
+      "4900    Margaret Jones        Critical                           NaN   \n",
+      "4867    Andrew Johnson        Critical                           NaN   \n",
+      "1391  Eduardo Mitchell        Critical                           NaN   \n",
+      "4872        John Davis        Critical                           NaN   \n",
+      "\n",
+      "      frustration_score  \n",
+      "0                  23.0  \n",
+      "4900               23.0  \n",
+      "4867               23.0  \n",
+      "1391               23.0  \n",
+      "4872               23.0  \n"
+     ]
+    }
+   ],
+   "source": [
+    "# Create Resolution Time in hours (numeric)\n",
+    "df['resolution_hours'] = (\n",
+    "    df['Time to Resolution'] - df['First Response Time']\n",
+    ").dt.total_seconds() / 3600\n",
+    "\n",
+    "# Create Frustration Score\n",
+    "# High priority + low satisfaction + long resolution = high frustration\n",
+    "priority_score = {'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1}\n",
+    "df['priority_score'] = df['Ticket Priority'].map(priority_score)\n",
+    "\n",
+    "# Normalize satisfaction (missing = worst case = 0)\n",
+    "df['satisfaction_score'] = df['Customer Satisfaction Rating'].fillna(0)\n",
+    "\n",
+    "# Frustration Score formula\n",
+    "df['frustration_score'] = (\n",
+    "    df['priority_score'] * 2 +\n",
+    "    (5 - df['satisfaction_score']) * 3\n",
+    ").round(2)\n",
+    "\n",
+    "print(\"Frustration Score created\")\n",
+    "print(\"\\nFrustration Score summary:\")\n",
+    "print(df['frustration_score'].describe())\n",
+    "\n",
+    "print(\"\\nTop 5 most frustrated customers:\")\n",
+    "print(df[['Customer Name', 'Ticket Priority', \n",
+    "          'Customer Satisfaction Rating',\n",
+    "          'frustration_score']].sort_values(\n",
+    "          'frustration_score', ascending=False).head())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "1d75d7b0-39d1-4d71-ace2-ed5dcbf6c068",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Clean dataset saved successfully\n",
+      "Total rows: 8469\n",
+      "New columns added: ['is_resolved', 'priority_score', 'satisfaction_score', 'frustration_score', 'resolution_hours']\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Save clean dataset\n",
+    "df.to_csv('/Users/madhuramdhanesh/Downloads/tickets_clean.csv', index=False)\n",
+    "\n",
+    "print(\"Clean dataset saved successfully\")\n",
+    "print(\"Total rows:\", len(df))\n",
+    "print(\"New columns added:\", ['is_resolved', 'priority_score', \n",
+    "                              'satisfaction_score', 'frustration_score',\n",
+    "                              'resolution_hours'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "bf28dc50-d0ed-4996-8b52-944c0a2e6950",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python [conda env:base] *",
+   "language": "python",
+   "name": "conda-base-py"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.9"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
