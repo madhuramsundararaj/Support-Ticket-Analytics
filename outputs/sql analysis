@@ -1,0 +1,412 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "2c1904a5-8c6a-4ae6-8fd2-d9240a17a0dc",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Database created successfully\n",
+      "Total rows: 8469\n"
+     ]
+    }
+   ],
+   "source": [
+    "import pandas as pd\n",
+    "import sqlite3\n",
+    "\n",
+    "conn = sqlite3.connect('/Users/madhuramdhanesh/Downloads/tickets_database.db')\n",
+    "df = pd.read_csv('/Users/madhuramdhanesh/Downloads/tickets_clean.csv')\n",
+    "df.to_sql('tickets', conn, if_exists='replace', index=False)\n",
+    "\n",
+    "print(\"Database created successfully\")\n",
+    "print(\"Total rows:\", len(df))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "4b759e9e-2676-492e-a60e-277f883a3bd1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Query 1 - Resolution Rate by Priority\n",
+      "  Ticket Priority  total_tickets  resolved_tickets  resolution_rate_pct  \\\n",
+      "0        Critical           2129               726                34.10   \n",
+      "1            High           2085               705                33.81   \n",
+      "2          Medium           2192               694                31.66   \n",
+      "3             Low           2063               644                31.22   \n",
+      "\n",
+      "   avg_frustration  \n",
+      "0            19.97  \n",
+      "1            17.97  \n",
+      "2            16.17  \n",
+      "3            14.14  \n"
+     ]
+    }
+   ],
+   "source": [
+    "# Query 1 - Ticket volume and resolution rate by priority\n",
+    "query1 = \"\"\"\n",
+    "SELECT \n",
+    "    \"Ticket Priority\",\n",
+    "    COUNT(*) as total_tickets,\n",
+    "    SUM(is_resolved) as resolved_tickets,\n",
+    "    ROUND(100.0 * SUM(is_resolved) / COUNT(*), 2) as resolution_rate_pct,\n",
+    "    ROUND(AVG(frustration_score), 2) as avg_frustration\n",
+    "FROM tickets\n",
+    "GROUP BY \"Ticket Priority\"\n",
+    "ORDER BY avg_frustration DESC;\n",
+    "\"\"\"\n",
+    "\n",
+    "result1 = pd.read_sql_query(query1, conn)\n",
+    "print(\"Query 1 - Resolution Rate by Priority\")\n",
+    "print(result1)\n",
+    "result1.to_csv('/Users/madhuramdhanesh/Downloads/resolution_by_priority.csv', index=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "58fbcc59-421b-41d5-b734-7f959d907c2f",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Query 2 - Channel Performance Ranking\n",
+      "  Ticket Channel  total_tickets  resolved_tickets  resolution_rate_pct  \\\n",
+      "0   Social media           2121               684                32.25   \n",
+      "1          Phone           2132               691                32.41   \n",
+      "2          Email           2143               720                33.60   \n",
+      "3           Chat           2073               674                32.51   \n",
+      "\n",
+      "   avg_frustration  frustration_rank  \n",
+      "0            17.14                 1  \n",
+      "1            17.13                 2  \n",
+      "2            17.06                 3  \n",
+      "3            16.98                 4  \n"
+     ]
+    }
+   ],
+   "source": [
+    "# Query 2 - Channel performance with ranking\n",
+    "query2 = \"\"\"\n",
+    "SELECT \n",
+    "    \"Ticket Channel\",\n",
+    "    COUNT(*) as total_tickets,\n",
+    "    SUM(is_resolved) as resolved_tickets,\n",
+    "    ROUND(100.0 * SUM(is_resolved) / COUNT(*), 2) as resolution_rate_pct,\n",
+    "    ROUND(AVG(frustration_score), 2) as avg_frustration,\n",
+    "    RANK() OVER (ORDER BY AVG(frustration_score) DESC) as frustration_rank\n",
+    "FROM tickets\n",
+    "GROUP BY \"Ticket Channel\"\n",
+    "ORDER BY frustration_rank;\n",
+    "\"\"\"\n",
+    "\n",
+    "result2 = pd.read_sql_query(query2, conn)\n",
+    "print(\"Query 2 - Channel Performance Ranking\")\n",
+    "print(result2)\n",
+    "result2.to_csv('/Users/madhuramdhanesh/Downloads/channel_ranking.csv', index=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "a6d7e75a-f077-4965-9550-cea18f182182",
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "SyntaxError",
+     "evalue": "unterminated string literal (detected at line 34) (2418799094.py, line 34)",
+     "output_type": "error",
+     "traceback": [
+      "  \u001b[36mCell\u001b[39m\u001b[36m \u001b[39m\u001b[32mIn[6]\u001b[39m\u001b[32m, line 34\u001b[39m\n\u001b[31m    \u001b[39m\u001b[31mresult3.to_csv('/Users/madhuramdhanesh/Downloads/esca\u001b[39m\n                   ^\n\u001b[31mSyntaxError\u001b[39m\u001b[31m:\u001b[39m unterminated string literal (detected at line 34)\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Query 3 - High escalation risk tickets using CTE\n",
+    "query3 = \"\"\"\n",
+    "WITH high_risk AS (\n",
+    "    SELECT \n",
+    "        \"Ticket ID\",\n",
+    "        \"Customer Name\",\n",
+    "        \"Ticket Type\",\n",
+    "        \"Ticket Priority\",\n",
+    "        \"Ticket Channel\",\n",
+    "        \"Ticket Status\",\n",
+    "        frustration_score,\n",
+    "        \"Customer Satisfaction Rating\",\n",
+    "        CASE \n",
+    "            WHEN frustration_score >= 20 THEN 'Critical Risk'\n",
+    "            WHEN frustration_score >= 17 THEN 'High Risk'\n",
+    "            WHEN frustration_score >= 14 THEN 'Medium Risk'\n",
+    "            ELSE 'Low Risk'\n",
+    "        END as escalation_risk\n",
+    "    FROM tickets\n",
+    ")\n",
+    "SELECT \n",
+    "    escalation_risk,\n",
+    "    COUNT(*) as total_tickets,\n",
+    "    ROUND(AVG(frustration_score), 2) as avg_frustration,\n",
+    "    ROUND(100.0 * COUNT(*) / 8469, 2) as pct_of_total\n",
+    "FROM high_risk\n",
+    "GROUP BY escalation_risk\n",
+    "ORDER BY avg_frustration DESC;\n",
+    "\"\"\"\n",
+    "\n",
+    "result3 = pd.read_sql_query(query3, conn)\n",
+    "print(\"Query 3 - Escalation Risk Distribution\")\n",
+    "print(result3)\n",
+    "result3.to_csv('/Users/madhuramdhanesh/Downloads/esca"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "7b6e46ab-4d01-49b3-8fff-2a8017853ed5",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Query 3 - Escalation Risk Distribution\n",
+      "  escalation_risk  total_tickets  avg_frustration  pct_of_total\n",
+      "0   Critical Risk           2935            21.90         34.66\n",
+      "1       High Risk           3210            17.98         37.90\n",
+      "2     Medium Risk            545            14.76          6.44\n",
+      "3        Low Risk           1779             8.19         21.01\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Query 3 - High escalation risk tickets using CTE\n",
+    "query3 = \"\"\"\n",
+    "WITH high_risk AS (\n",
+    "    SELECT \n",
+    "        \"Ticket ID\",\n",
+    "        \"Customer Name\",\n",
+    "        \"Ticket Type\",\n",
+    "        \"Ticket Priority\",\n",
+    "        \"Ticket Channel\",\n",
+    "        \"Ticket Status\",\n",
+    "        frustration_score,\n",
+    "        \"Customer Satisfaction Rating\",\n",
+    "        CASE \n",
+    "            WHEN frustration_score >= 20 THEN 'Critical Risk'\n",
+    "            WHEN frustration_score >= 17 THEN 'High Risk'\n",
+    "            WHEN frustration_score >= 14 THEN 'Medium Risk'\n",
+    "            ELSE 'Low Risk'\n",
+    "        END as escalation_risk\n",
+    "    FROM tickets\n",
+    ")\n",
+    "SELECT \n",
+    "    escalation_risk,\n",
+    "    COUNT(*) as total_tickets,\n",
+    "    ROUND(AVG(frustration_score), 2) as avg_frustration,\n",
+    "    ROUND(100.0 * COUNT(*) / 8469, 2) as pct_of_total\n",
+    "FROM high_risk\n",
+    "GROUP BY escalation_risk\n",
+    "ORDER BY avg_frustration DESC;\n",
+    "\"\"\"\n",
+    "\n",
+    "result3 = pd.read_sql_query(query3, conn)\n",
+    "print(\"Query 3 - Escalation Risk Distribution\")\n",
+    "print(result3)\n",
+    "result3.to_csv('/Users/madhuramdhanesh/Downloads/escalation_risk.csv', index=False)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "0e96621d-920c-4faa-bc19-4a87e31f08ec",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Query 4 - Top 10 Products by Frustration\n",
+      "                Product Purchased  total_tickets  avg_frustration  \\\n",
+      "0                        Dell XPS            185            17.86   \n",
+      "1         Fitbit Versa Smartwatch            191            17.65   \n",
+      "2                 Lenovo ThinkPad            183            17.57   \n",
+      "3  Nintendo Switch Pro Controller            203            17.51   \n",
+      "4       Microsoft Xbox Controller            196            17.49   \n",
+      "5                  Samsung Galaxy            194            17.48   \n",
+      "6          Bose SoundLink Speaker            197            17.39   \n",
+      "7              LG Washing Machine            208            17.31   \n",
+      "8             GoPro Action Camera            183            17.31   \n",
+      "9                   Fitbit Charge            202            17.31   \n",
+      "\n",
+      "   avg_satisfaction  critical_tickets  resolved_tickets  \n",
+      "0              2.75                53                48  \n",
+      "1              2.54                55                63  \n",
+      "2              3.06                48                47  \n",
+      "3              3.18                39                49  \n",
+      "4              2.79                47                58  \n",
+      "5              2.98                45                57  \n",
+      "6              2.89                51                64  \n",
+      "7              3.00                57                68  \n",
+      "8              2.75                52                59  \n",
+      "9              2.89                48                63  \n"
+     ]
+    }
+   ],
+   "source": [
+    "# Query 4 - Product performance analysis\n",
+    "query4 = \"\"\"\n",
+    "SELECT \n",
+    "    \"Product Purchased\",\n",
+    "    COUNT(*) as total_tickets,\n",
+    "    ROUND(AVG(frustration_score), 2) as avg_frustration,\n",
+    "    ROUND(AVG(\"Customer Satisfaction Rating\"), 2) as avg_satisfaction,\n",
+    "    SUM(CASE WHEN \"Ticket Priority\" = 'Critical' THEN 1 ELSE 0 END) as critical_tickets,\n",
+    "    SUM(CASE WHEN \"Ticket Status\" = 'Closed' THEN 1 ELSE 0 END) as resolved_tickets\n",
+    "FROM tickets\n",
+    "GROUP BY \"Product Purchased\"\n",
+    "ORDER BY avg_frustration DESC\n",
+    "LIMIT 10;\n",
+    "\"\"\"\n",
+    "\n",
+    "result4 = pd.read_sql_query(query4, conn)\n",
+    "print(\"Query 4 - Top 10 Products by Frustration\")\n",
+    "print(result4)\n",
+    "result4.to_csv('/Users/madhuramdhanesh/Downloads/product_performance.csv', index=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "f4eb59f4-b016-4974-bac4-5da58725df9d",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Query 5 - Monthly Ticket Trends\n",
+      "      month  total_tickets  resolved_tickets  avg_frustration  \\\n",
+      "0   2020-01            377               127            16.98   \n",
+      "1   2020-02            376               123            17.09   \n",
+      "2   2020-03            324               105            16.96   \n",
+      "3   2020-04            354               123            16.91   \n",
+      "4   2020-05            322                96            17.16   \n",
+      "5   2020-06            358               124            16.87   \n",
+      "6   2020-07            366               119            16.86   \n",
+      "7   2020-08            327                96            17.55   \n",
+      "8   2020-09            369               139            16.31   \n",
+      "9   2020-10            373               120            17.10   \n",
+      "10  2020-11            340                97            17.64   \n",
+      "11  2020-12            350               134            16.52   \n",
+      "12  2021-01            359               122            17.03   \n",
+      "13  2021-02            339               107            17.40   \n",
+      "14  2021-03            348               106            17.16   \n",
+      "15  2021-04            364               114            17.12   \n",
+      "16  2021-05            379               115            17.16   \n",
+      "17  2021-06            320               107            17.17   \n",
+      "18  2021-07            361               126            17.35   \n",
+      "19  2021-08            364               114            17.15   \n",
+      "20  2021-09            327               104            17.44   \n",
+      "21  2021-10            362               115            17.16   \n",
+      "22  2021-11            364               121            17.12   \n",
+      "23  2021-12            346               115            16.77   \n",
+      "\n",
+      "    prev_month_tickets  month_over_month_change  \n",
+      "0                  NaN                      NaN  \n",
+      "1                377.0                     -1.0  \n",
+      "2                376.0                    -52.0  \n",
+      "3                324.0                     30.0  \n",
+      "4                354.0                    -32.0  \n",
+      "5                322.0                     36.0  \n",
+      "6                358.0                      8.0  \n",
+      "7                366.0                    -39.0  \n",
+      "8                327.0                     42.0  \n",
+      "9                369.0                      4.0  \n",
+      "10               373.0                    -33.0  \n",
+      "11               340.0                     10.0  \n",
+      "12               350.0                      9.0  \n",
+      "13               359.0                    -20.0  \n",
+      "14               339.0                      9.0  \n",
+      "15               348.0                     16.0  \n",
+      "16               364.0                     15.0  \n",
+      "17               379.0                    -59.0  \n",
+      "18               320.0                     41.0  \n",
+      "19               361.0                      3.0  \n",
+      "20               364.0                    -37.0  \n",
+      "21               327.0                     35.0  \n",
+      "22               362.0                      2.0  \n",
+      "23               364.0                    -18.0  \n"
+     ]
+    }
+   ],
+   "source": [
+    "# Query 5 - Ticket trends using LAG window function\n",
+    "query5 = \"\"\"\n",
+    "WITH monthly_tickets AS (\n",
+    "    SELECT \n",
+    "        substr(\"Date of Purchase\", 1, 7) as month,\n",
+    "        COUNT(*) as total_tickets,\n",
+    "        SUM(is_resolved) as resolved_tickets,\n",
+    "        ROUND(AVG(frustration_score), 2) as avg_frustration\n",
+    "    FROM tickets\n",
+    "    GROUP BY substr(\"Date of Purchase\", 1, 7)\n",
+    ")\n",
+    "SELECT \n",
+    "    month,\n",
+    "    total_tickets,\n",
+    "    resolved_tickets,\n",
+    "    avg_frustration,\n",
+    "    LAG(total_tickets) OVER (ORDER BY month) as prev_month_tickets,\n",
+    "    total_tickets - LAG(total_tickets) OVER (ORDER BY month) as month_over_month_change\n",
+    "FROM monthly_tickets\n",
+    "ORDER BY month;\n",
+    "\"\"\"\n",
+    "\n",
+    "result5 = pd.read_sql_query(query5, conn)\n",
+    "print(\"Query 5 - Monthly Ticket Trends\")\n",
+    "print(result5)\n",
+    "result5.to_csv('/Users/madhuramdhanesh/Downloads/monthly_trends.csv', index=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e482c87a-ff77-4b6c-b3ec-90bf16d0e638",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python [conda env:base] *",
+   "language": "python",
+   "name": "conda-base-py"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.9"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
